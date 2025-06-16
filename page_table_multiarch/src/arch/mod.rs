@@ -9,3 +9,5 @@ pub mod aarch64;
 
 #[cfg(any(target_arch = "loongarch64", doc))]
 pub mod loongarch64;
+
+pub use bits64::PageTableMapping;
