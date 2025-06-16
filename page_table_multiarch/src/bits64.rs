@@ -22,7 +22,7 @@ const fn p1_index(vaddr: usize) -> usize {
 }
 
 pub struct PageTableMapping<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> {
-    dest: &'a mut PageTable64<M>,
+    dest: &'a mut PageTable64<M, PTE, H>,
     source_paddr: PhysAddr,
     start_idx: usize,
     end_idx: usize,
@@ -38,7 +38,7 @@ pub struct PageTable64<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> {
     _phantom: PhantomData<(M, PTE, H)>,
 }
 
-impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H> {
+impl<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H> {
     /// Creates a new page table instance or returns the error.
     ///
     /// It will allocate a new page for the root page table.
@@ -333,7 +333,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H
     }
 
     /// Copy entries from another page table within the given virtual memory range.
-    pub fn copy_from(
+    pub fn copy_from<'a>(
         &mut self,
         other: &Self,
         start: M::VirtAddr,
@@ -564,7 +564,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop for PageTable64<
     }
 }
 
-impl<'a, M: Mapper> Drop for PageTableMapping<'a, M> {
+impl<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop for PageTableMapping<'a, M, PTE, H> {
     fn drop(&mut self) {
         // 自动清理目标页表中的共享条目
         let table = self.dest.table_of_mut(self.dest.root_paddr);
