@@ -564,7 +564,9 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop for PageTable64<
     }
 }
 
-impl<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop for PageTableMapping<'a, M, PTE, H> {
+impl<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop
+    for PageTableMapping<'a, M, PTE, H>
+{
     fn drop(&mut self) {
         // 自动清理目标页表中的共享条目
         let table = self.dest.table_of_mut(self.dest.root_paddr);
