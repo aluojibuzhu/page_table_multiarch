@@ -21,6 +21,14 @@ const fn p1_index(vaddr: usize) -> usize {
     (vaddr >> 12) & (ENTRY_COUNT - 1)
 }
 
+pub struct PageTableMapping<'a, M: Mapper> {
+    dest: &'a mut PageTable<M>,
+    source_paddr: PhysAddr,
+    start_idx: usize,
+    end_idx: usize,
+    _marker: PhantomData<&'a PageTable<M>>,
+}
+
 /// A generic page table struct for 64-bit platform.
 ///
 /// It also tracks all intermediate level tables. They will be deallocated
@@ -325,9 +333,20 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H
     }
 
     /// Copy entries from another page table within the given virtual memory range.
-    pub fn copy_from(&mut self, other: &Self, start: M::VirtAddr, size: usize) {
+    pub fn copy_from(
+        &mut self,
+        other: &Self,
+        start: M::VirtAddr,
+        size: usize,
+    ) -> PageTableMapping<'a, M> {
         if size == 0 {
-            return;
+            return PageTableMapping {
+                dest: self,
+                source_paddr: PhysAddr::zero(),
+                start_idx: 0,
+                end_idx: 0,
+                _marker: PhantomData,
+            };
         }
         let src_table = self.table_of(other.root_paddr);
         let dst_table = self.table_of_mut(self.root_paddr);
@@ -343,6 +362,13 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H
         assert!(start_idx < ENTRY_COUNT);
         assert!(end_idx <= ENTRY_COUNT);
         dst_table[start_idx..end_idx].copy_from_slice(&src_table[start_idx..end_idx]);
+        PageTableMapping {
+            dest: self,
+            source_paddr: other.root_paddr,
+            start_idx,
+            end_idx,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -535,5 +561,15 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> Drop for PageTable64<
             }),
         );
         H::dealloc_frame(self.root_paddr());
+    }
+}
+
+impl<'a, M: Mapper> Drop for PageTableMapping<'a, M> {
+    fn drop(&mut self) {
+        // 自动清理目标页表中的共享条目
+        let table = self.dest.table_of_mut(self.dest.root_paddr);
+        for pte in &mut table[self.start_idx..self.end_idx] {
+            pte.clear();
+        }
     }
 }
