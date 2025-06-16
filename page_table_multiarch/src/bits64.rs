@@ -21,12 +21,12 @@ const fn p1_index(vaddr: usize) -> usize {
     (vaddr >> 12) & (ENTRY_COUNT - 1)
 }
 
-pub struct PageTableMapping<'a, M: Mapper> {
-    dest: &'a mut PageTable<M>,
+pub struct PageTableMapping<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> {
+    dest: &'a mut PageTable64<M>,
     source_paddr: PhysAddr,
     start_idx: usize,
     end_idx: usize,
-    _marker: PhantomData<&'a PageTable<M>>,
+    _marker: PhantomData<&'a PageTable64<M, PTE, H>>,
 }
 
 /// A generic page table struct for 64-bit platform.
@@ -338,7 +338,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PTE, H
         other: &Self,
         start: M::VirtAddr,
         size: usize,
-    ) -> PageTableMapping<'a, M> {
+    ) -> PageTableMapping<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> {
         if size == 0 {
             return PageTableMapping {
                 dest: self,
