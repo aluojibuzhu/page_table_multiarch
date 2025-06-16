@@ -333,16 +333,16 @@ impl<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> PageTable64<M, PT
     }
 
     /// Copy entries from another page table within the given virtual memory range.
-    pub fn copy_from<'a>(
+    pub fn copy_from(
         &mut self,
         other: &Self,
         start: M::VirtAddr,
         size: usize,
-    ) -> PageTableMapping<'a, M: PagingMetaData, PTE: GenericPTE, H: PagingHandler> {
+    ) -> PageTableMapping<'a, M, PTE, H> {
         if size == 0 {
             return PageTableMapping {
                 dest: self,
-                source_paddr: PhysAddr::zero(),
+                source_paddr: PhysAddr::from_usize(0),
                 start_idx: 0,
                 end_idx: 0,
                 _marker: PhantomData,
